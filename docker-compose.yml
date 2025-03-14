@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  backend:
+    build: .
+    container_name: backend-app
+    depends_on:
+      db:
+        condition: service_healthy 
+    environment:
+      - DATABASE_URL=postgres://postgres:kiru@db:5432/secure_db
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8000 securebackend.wsgi:application"
+
+  db:
+    image: postgres:latest
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_DB: secure_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: kiru
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
